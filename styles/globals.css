@@ -8,6 +8,10 @@
     font-family: 'Montserrat', sans-serif;
 }
 
+::-webkit-scrollbar {
+    display: none;
+}
+
 @layer {
     html, body {
         height: 100%;
