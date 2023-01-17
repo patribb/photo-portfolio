@@ -3,6 +3,13 @@ import Link from 'next/link';
 import Image from 'next/image';
 import Masonry from 'react-masonry-css';
 import { Tab } from '@headlessui/react';
+import type { LightGallery } from 'lightgallery/lightgallery';
+import LightGalleryComponent from 'lightgallery/react';
+import lgThumbnail from 'lightgallery/plugins/thumbnail';
+import lgZoom from 'lightgallery/plugins/zoom';
+import 'lightgallery/css/lightgallery.css';
+import 'lightgallery/css/lg-zoom.css';
+import 'lightgallery/css/lg-thumbnail.css';
 
 import ocean1 from '../public/ocean-1.jpg'
 import ocean2 from '../public/ocean-2.jpg'
@@ -10,6 +17,7 @@ import ocean3 from '../public/ocean-3.jpg'
 import ocean4 from '../public/ocean-4.jpg'
 import ocean5 from '../public/ocean-5.jpg'
 import photographyBg from '../public/photography-bg.jpg'
+import { useRef } from 'react';
 
 const tabs = [
   {key: 'all', display: 'ALL'},
@@ -20,6 +28,8 @@ const tabs = [
 const images = [ocean1, ocean2, ocean3, ocean4, ocean5]
 
 export default function Home() {
+  const lightboxRef = useRef<LightGallery | null>(null)
+
   return (
     <div className='h-full overflow-auto'>
       <Head>
@@ -49,10 +59,23 @@ export default function Home() {
           breakpointCols={2}
           className="flex gap-4"
           columnClassName="my-masonry-grid_column">
-            {images.map((image) => (
-              <Image key={image.src} placeholder='blur' src={image} alt="" className='my-4' />
+            {images.map((image, idx) => (
+              <Image onClick={() => {
+                lightboxRef.current?.openGallery(idx)
+              }} key={image.src} placeholder='blur' src={image} alt="" className='my-4' />
             ))}
         </Masonry>
+        <LightGalleryComponent onInit={(ref) => {
+          if(ref) {
+            lightboxRef.current = ref.instance
+          }
+        }} dynamicEl={[
+          { src: '/ocean-1.jpg', thumb: '/ocean-1.jpg' },
+          { src: '/ocean-2.jpg', thumb: '/ocean-2.jpg' },
+          { src: '/ocean-3.jpg', thumb: '/ocean-3.jpg' },
+          { src: '/ocean-4.jpg', thumb: '/ocean-4.jpg' },
+          { src: '/ocean-5.jpg', thumb: '/ocean-5.jpg' },
+        ]} dynamic speed={500} plugins={[lgThumbnail, lgZoom]} />
         </Tab.Panel>
         <Tab.Panel>Oceans</Tab.Panel>
         <Tab.Panel>Forests</Tab.Panel>
