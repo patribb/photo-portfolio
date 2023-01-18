@@ -1,28 +1,16 @@
 import Head from 'next/head';
 import Link from 'next/link';
 import Image from 'next/image';
-import Masonry from 'react-masonry-css';
 import { Tab } from '@headlessui/react';
 import * as  nodeFetch from 'node-fetch'
-import type { LightGallery } from 'lightgallery/lightgallery';
-import LightGalleryComponent from 'lightgallery/react';
-import lgThumbnail from 'lightgallery/plugins/thumbnail';
-import lgZoom from 'lightgallery/plugins/zoom';
-import 'lightgallery/css/lightgallery.css';
-import 'lightgallery/css/lg-zoom.css';
-import 'lightgallery/css/lg-thumbnail.css';
 import photographyBg from '../public/photography-bg.jpg'
-import { useRef } from 'react';
 import { GetStaticProps } from 'next';
-import { HomeProps, Photo } from '@/types';
+import { HomeProps } from '@/types';
 import { createApi } from 'unsplash-js';
 import { getImages } from '@/utils/image-util';
+import Gallery from '@/components/Gallery';
 
 type CreateApi = ReturnType<typeof createApi>
-// type SerachPhotos = CreateApi['search']
-// type GetPhotos = SerachPhotos['getPhotos']
-// type Photoresponse = Awaited<ReturnType<GetPhotos>>
-
 
 const tabs = [
   {key: 'all', display: 'ALL'},
@@ -36,13 +24,15 @@ export const getStaticProps: GetStaticProps<HomeProps> = async () => {
     fetch: nodeFetch.default as unknown as typeof fetch
   })
  
-  const oceans = await getImages(unsplash, 'oceans')
-  const forests = await getImages(unsplash, 'forests')
+  const [oceans, forests] = await Promise.all([
+    getImages(unsplash, 'oceans'),
+    getImages(unsplash, 'forests'),
+  ])
   
   return {
     props: {
       oceans,
-      forests
+      forests,
     },
   }
 }
@@ -93,60 +83,5 @@ export default function Home({oceans, forests}: HomeProps) {
   );
 }
 
-interface GalleryProps {
-  photos: Photo[]
-}
-
-const Gallery = ({photos}: GalleryProps) => {
-  const lightboxRef = useRef<LightGallery | null>(null)
-  return (
-   <>
-    <Masonry
-          breakpointCols={2}
-          className="flex gap-4"
-          columnClassName="my-masonry-grid_column">
-            {photos.map((photo, idx) => (
-              <Image
-              blurDataURL={photo.blurDataURL}
-              width={photo.width}
-              height={photo.height}
-               onClick={() => {
-                lightboxRef.current?.openGallery(idx)
-              }} key={photo.src}  src={photo.src} alt={photo.alt} className='my-4 hover:opacity-70 hover:cursor-pointer' />
-            ))}
-        </Masonry>
-        <LightGalleryComponent onInit={(ref) => {
-          if(ref) {
-            lightboxRef.current = ref.instance
-          }
-        }} 
-        dynamicEl={photos.map(photo => ({
-          key: photo.src,
-          src: photo.src,
-          thumb: photo.src
-        }))} 
-        dynamic speed={500} plugins={[lgThumbnail, lgZoom]} /> 
-   </>
-  )
-}
 
 
-// const getImages = async (cli: ReturnType<typeof createApi>, query: string): Promise<Photo[]> => {
-//   const mappedPhotos: Photo[] = []
-//   const photos =  await cli.search.getPhotos({
-//     query
-//   })
-//   if(photos.type === 'success') {
-//     const photosArr = photos.response.results.map((photo, idx )=> ({
-//       src: photo.urls.full,
-//       thumb: photo.urls.thumb,
-//       width: photo.width,
-//       height: photo.height,
-//       alt: photo.alt_description ?? `photo image-${idx}`,
-//     }))
-//     mappedPhotos.push(...photosArr)
-//   } else {
-//     console.error('Could not getphotos')
-//   }
-//   return mappedPhotos
-// }
