@@ -3,6 +3,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import Masonry from 'react-masonry-css';
 import { Tab } from '@headlessui/react';
+import * as  nodeFetch from 'node-fetch'
 import type { LightGallery } from 'lightgallery/lightgallery';
 import LightGalleryComponent from 'lightgallery/react';
 import lgThumbnail from 'lightgallery/plugins/thumbnail';
@@ -10,14 +11,17 @@ import lgZoom from 'lightgallery/plugins/zoom';
 import 'lightgallery/css/lightgallery.css';
 import 'lightgallery/css/lg-zoom.css';
 import 'lightgallery/css/lg-thumbnail.css';
-
-import ocean1 from '../public/ocean-1.jpg'
-import ocean2 from '../public/ocean-2.jpg'
-import ocean3 from '../public/ocean-3.jpg'
-import ocean4 from '../public/ocean-4.jpg'
-import ocean5 from '../public/ocean-5.jpg'
 import photographyBg from '../public/photography-bg.jpg'
 import { useRef } from 'react';
+import { GetStaticProps } from 'next';
+import { HomeProps, Photo } from '@/types';
+import { createApi } from 'unsplash-js';
+
+// type CreateApi = ReturnType<typeof createApi>
+// type SerachPhotos = CreateApi['search']
+// type GetPhotos = SerachPhotos['getPhotos']
+// type Photoresponse = Awaited<ReturnType<GetPhotos>>
+
 
 const tabs = [
   {key: 'all', display: 'ALL'},
@@ -25,11 +29,57 @@ const tabs = [
   {key: 'forests', display: 'FORESTS'},
 ]
 
-const images = [ocean1, ocean2, ocean3, ocean4, ocean5]
+export const getStaticProps: GetStaticProps<HomeProps> = async () => {
+  const unsplash = createApi({
+    accessKey: process.env.UNPLASH_ACCESS_KEY!,
+    fetch: nodeFetch.default as unknown as typeof fetch
+  })
+  const oceans =  await unsplash.search.getPhotos({
+    query: 'oceans'
+  })
 
-export default function Home() {
-  const lightboxRef = useRef<LightGallery | null>(null)
+  const forests = await unsplash.search.getPhotos({
+    query: 'forests'
+  })
 
+  const mappedOceans: Photo[] = []
+  if(oceans.type === 'success') {
+    const oceanArr = oceans.response.results.map((ocean, idx )=> ({
+      src: ocean.urls.full,
+      thumb: ocean.urls.thumb,
+      width: ocean.width,
+      height: ocean.height,
+      alt: ocean.alt_description ?? `ocean image-${idx}`,
+    }))
+    mappedOceans.push(...oceanArr)
+  } else {
+    console.error('Could not get ocean photos')
+  }
+
+  const mappedForests: Photo[] = []
+  if(forests.type === 'success') {
+    const forestArr = forests.response.results.map((forest, idx) => ({
+      src: forest.urls.full,
+      thumb: forest.urls.thumb,
+      width: forest.width,
+      height: forest.height,
+      alt: forest.alt_description ?? `forests image-${idx}`,
+    }))
+    mappedForests.push(...forestArr)
+  } else {
+    console.error('Could not get forest photos')
+  }
+  
+  return {
+    props: {
+      oceans: mappedOceans,
+      forests: mappedForests
+    },
+  }
+}
+
+export default function Home({oceans, forests}: HomeProps) {
+  
   return (
     <div className='h-full overflow-auto'>
       <Head>
@@ -39,7 +89,7 @@ export default function Home() {
         <link rel='icon' href='/favicon.ico' />
       </Head>
 
-      <Image placeholder='blur' src={photographyBg} alt="" className='fixed left-0 top-0 z-0 from-stone-900 bg-gradient-to-t' />
+      <Image placeholder='blur' src={photographyBg} alt="" className='fixed opacity-90 left-0 top-0 z-0 from-stone-900 bg-gradient-to-t' />
       <div className="fixed left-0 top-0 w-full h-full z-10"></div>
       <header className="flex bg-stone-900  w-full z-30 top-0 fixed justify-between items-center h-[90px] px-10">
         <span className="font-black text-3xl">PHOTO!</span>
@@ -55,30 +105,14 @@ export default function Home() {
       </Tab.List>
       <Tab.Panels className='h-full bg-stone-900 bg-opacity-40 max-w-[900px] w-full p-2 sm:p-4 my-6'>
         <Tab.Panel>
-        <Masonry
-          breakpointCols={2}
-          className="flex gap-4"
-          columnClassName="my-masonry-grid_column">
-            {images.map((image, idx) => (
-              <Image onClick={() => {
-                lightboxRef.current?.openGallery(idx)
-              }} key={image.src} placeholder='blur' src={image} alt="" className='my-4' />
-            ))}
-        </Masonry>
-        <LightGalleryComponent onInit={(ref) => {
-          if(ref) {
-            lightboxRef.current = ref.instance
-          }
-        }} dynamicEl={[
-          { src: '/ocean-1.jpg', thumb: '/ocean-1.jpg' },
-          { src: '/ocean-2.jpg', thumb: '/ocean-2.jpg' },
-          { src: '/ocean-3.jpg', thumb: '/ocean-3.jpg' },
-          { src: '/ocean-4.jpg', thumb: '/ocean-4.jpg' },
-          { src: '/ocean-5.jpg', thumb: '/ocean-5.jpg' },
-        ]} dynamic speed={500} plugins={[lgThumbnail, lgZoom]} />
+          <Gallery photos={[...oceans, ...forests]} />
         </Tab.Panel>
-        <Tab.Panel>Oceans</Tab.Panel>
-        <Tab.Panel>Forests</Tab.Panel>
+        <Tab.Panel>
+        <Gallery photos={oceans} />
+        </Tab.Panel>
+        <Tab.Panel>
+          <Gallery photos={forests} />
+        </Tab.Panel>
       </Tab.Panels>
     </Tab.Group>
      </div>
@@ -88,4 +122,40 @@ export default function Home() {
       </footer>
     </div>
   );
+}
+
+interface GalleryProps {
+  photos: Photo[]
+}
+
+const Gallery = ({photos}: GalleryProps) => {
+  const lightboxRef = useRef<LightGallery | null>(null)
+  return (
+   <>
+    <Masonry
+          breakpointCols={2}
+          className="flex gap-4"
+          columnClassName="my-masonry-grid_column">
+            {photos.map((photo, idx) => (
+              <Image
+              width={photo.width}
+              height={photo.height}
+               onClick={() => {
+                lightboxRef.current?.openGallery(idx)
+              }} key={photo.src}  src={photo.src} alt={photo.alt} className='my-4 hover:opacity-70 hover:cursor-pointer' />
+            ))}
+        </Masonry>
+        <LightGalleryComponent onInit={(ref) => {
+          if(ref) {
+            lightboxRef.current = ref.instance
+          }
+        }} 
+        dynamicEl={photos.map(photo => ({
+          key: photo.src,
+          src: photo.src,
+          thumb: photo.src
+        }))} 
+        dynamic speed={500} plugins={[lgThumbnail, lgZoom]} /> 
+   </>
+  )
 }
