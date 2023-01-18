@@ -16,8 +16,9 @@ import { useRef } from 'react';
 import { GetStaticProps } from 'next';
 import { HomeProps, Photo } from '@/types';
 import { createApi } from 'unsplash-js';
+import { getImages } from '@/utils/image-util';
 
-// type CreateApi = ReturnType<typeof createApi>
+type CreateApi = ReturnType<typeof createApi>
 // type SerachPhotos = CreateApi['search']
 // type GetPhotos = SerachPhotos['getPhotos']
 // type Photoresponse = Awaited<ReturnType<GetPhotos>>
@@ -34,46 +35,14 @@ export const getStaticProps: GetStaticProps<HomeProps> = async () => {
     accessKey: process.env.UNPLASH_ACCESS_KEY!,
     fetch: nodeFetch.default as unknown as typeof fetch
   })
-  const oceans =  await unsplash.search.getPhotos({
-    query: 'oceans'
-  })
-
-  const forests = await unsplash.search.getPhotos({
-    query: 'forests'
-  })
-
-  const mappedOceans: Photo[] = []
-  if(oceans.type === 'success') {
-    const oceanArr = oceans.response.results.map((ocean, idx )=> ({
-      src: ocean.urls.full,
-      thumb: ocean.urls.thumb,
-      width: ocean.width,
-      height: ocean.height,
-      alt: ocean.alt_description ?? `ocean image-${idx}`,
-    }))
-    mappedOceans.push(...oceanArr)
-  } else {
-    console.error('Could not get ocean photos')
-  }
-
-  const mappedForests: Photo[] = []
-  if(forests.type === 'success') {
-    const forestArr = forests.response.results.map((forest, idx) => ({
-      src: forest.urls.full,
-      thumb: forest.urls.thumb,
-      width: forest.width,
-      height: forest.height,
-      alt: forest.alt_description ?? `forests image-${idx}`,
-    }))
-    mappedForests.push(...forestArr)
-  } else {
-    console.error('Could not get forest photos')
-  }
+ 
+  const oceans = await getImages(unsplash, 'oceans')
+  const forests = await getImages(unsplash, 'forests')
   
   return {
     props: {
-      oceans: mappedOceans,
-      forests: mappedForests
+      oceans,
+      forests
     },
   }
 }
@@ -138,6 +107,7 @@ const Gallery = ({photos}: GalleryProps) => {
           columnClassName="my-masonry-grid_column">
             {photos.map((photo, idx) => (
               <Image
+              blurDataURL={photo.blurDataURL}
               width={photo.width}
               height={photo.height}
                onClick={() => {
@@ -159,3 +129,24 @@ const Gallery = ({photos}: GalleryProps) => {
    </>
   )
 }
+
+
+// const getImages = async (cli: ReturnType<typeof createApi>, query: string): Promise<Photo[]> => {
+//   const mappedPhotos: Photo[] = []
+//   const photos =  await cli.search.getPhotos({
+//     query
+//   })
+//   if(photos.type === 'success') {
+//     const photosArr = photos.response.results.map((photo, idx )=> ({
+//       src: photo.urls.full,
+//       thumb: photo.urls.thumb,
+//       width: photo.width,
+//       height: photo.height,
+//       alt: photo.alt_description ?? `photo image-${idx}`,
+//     }))
+//     mappedPhotos.push(...photosArr)
+//   } else {
+//     console.error('Could not getphotos')
+//   }
+//   return mappedPhotos
+// }
